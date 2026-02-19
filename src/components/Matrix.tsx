@@ -13,12 +13,20 @@ function Matrix() {
             setMatrix(lifeGame.current.matrix)
     }, [rows, columns])
     React.useEffect(() => {
-        function tic() {
-            setMatrix(lifeGame.current!.nextMatrix())
+    function tic() {
+        if (lifeGame.current) {
+            // Вызываем расчет следующего поколения по правилам игры
+            const newMatrix = lifeGame.current.nextTurn();
+            // Обновляем состояние, чтобы React перерисовал сетку
+            setMatrix([...newMatrix]); 
         }
-        const intervalId = setInterval(tic, ticInterval)
-        return () => clearInterval(intervalId)
-    }, [ticInterval])
+    }
+
+    const intervalId = setInterval(tic, ticInterval);
+    
+    // Очистка интервала при размонтировании компонента
+    return () => clearInterval(intervalId);
+}, [ticInterval]);
     function getCells(matrix: number[][]): ReactNode {
         return matrix.map((row, rInd) => {
             return row.map((cellValue, cInd) => <div key={`${rInd}-${cInd}`}
