@@ -17,9 +17,7 @@ export default class LifeGameService {
         return getRandomIntMatrix(this._matrix.length, this._matrix[0].length, 0, 1);
     }
 
-    /**
-     * НОВЫЙ МЕТОД: Рассчитывает следующий шаг по правилам игры «Жизнь»
-     */
+    // Метод для расчета следующего поколения по правилам игры
     nextTurn(): number[][] {
 
         const nextGen = this._matrix.map((row, rIdx) =>
@@ -27,12 +25,12 @@ export default class LifeGameService {
                 const liveNeighbors = this.countLiveNeighbors(rIdx, cIdx);
 
                 // Логика Конвея
-                if (cell === 1) {
+                if (cell) {
                     // Живая клетка: 2 или 3 соседа — живет, иначе — смерть
-                    return (liveNeighbors === 2 || liveNeighbors === 3) ? 1 : 0;
+                    return +(liveNeighbors === 2 || liveNeighbors === 3)
                 } else {
                     // Мертвая клетка: ровно 3 соседа — рождение
-                    return liveNeighbors === 3 ? 1 : 0;
+                    return +(liveNeighbors === 3)
                 }
             })
         );
