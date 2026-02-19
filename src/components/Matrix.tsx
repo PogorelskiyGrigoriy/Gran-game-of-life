@@ -1,59 +1,61 @@
-import React, { ReactNode } from "react";
+import React, { useEffect, useState, useMemo } from 'react';
 import LifeGameService from "../services/LifeGameService";
 import { getRandomIntMatrix } from "../utils/random";
 import matrixData from "../config/matrix-config";
 
-function Matrix() {
-  const { rows, columns, ticInterval } = matrixData;
+const Matrix: React.FC = () => {
+    const { rows, columns, ticInterval } = matrixData;
 
-  // 1. Используем ленивую инициализацию стейта, чтобы сразу видеть картинку
-  const [matrix, setMatrix] = React.useState<number[][]>(() =>
-    getRandomIntMatrix(rows, columns, 0, 1),
-  );
+    // 1. Используем useMemo как "хранилище" для всего, что не должно меняться.
+    // Мы создаем и матрицу, и сервис ОДИН РАЗ внутри этого блока.
+    // Теперь компилятор спокоен: зависимости [] честные, так как внутри нет внешних переменных.
+    const { initialMatrix, lifeGame } = useMemo(() => {
+        const matrix = getRandomIntMatrix(rows, columns, 0, 1);
+        const service = new LifeGameService(matrix);
+        return { initialMatrix: matrix, lifeGame: service };
+    }, [rows, columns]);
 
-  // 2. Создаем сервис, передавая ему ТУ ЖЕ начальную матрицу
-  const lifeGame = React.useMemo(() => {
-    return new LifeGameService(matrix);
-  }, [rows, columns]);
+    // 2. Инициализируем стейт начальной матрицей из нашего хранилища
+    const [matrix, setMatrix] = useState<number[][]>(initialMatrix);
 
-  React.useEffect(() => {
-    function tic() {
-      if (lifeGame) {
-        const newMatrix = lifeGame.nextTurn();
-        // Важно: создаем новый массив массивов для триггера рендера
-        setMatrix([...newMatrix.map((row) => [...row])]);
-      }
-    }
+    // 3. Оптимизируем отрисовку ячеек
+    const renderedCells = useMemo(() => {
+        return matrix.map((row, rInd) => 
+            row.map((cellValue, cInd) => (
+                <div 
+                    key={`${rInd}-${cInd}`}
+                    className={`cell ${cellValue ? "cell-alive" : "cell-dead"}`}
+                />
+            ))
+        );
+    }, [matrix]);
 
-    const intervalId = setInterval(tic, ticInterval);
-    return () => clearInterval(intervalId);
-  }, [lifeGame, ticInterval]); // Добавили lifeGame в зависимости
+    // 4. Игровой цикл
+    useEffect(() => {
+        const tic = () => {
+            const nextGen = lifeGame.nextTurn();
+            // Делаем глубокую копию, чтобы React "проснулся"
+            setMatrix([...nextGen.map(row => [...row])]);
+        };
 
-  function getCells(matrix: number[][]): ReactNode {
-    return matrix.map((row, rInd) =>
-      row.map((cellValue, cInd) => (
-        <div
-          key={`${rInd}-${cInd}`}
-          className={`cell ${cellValue ? "cell-alive" : "cell-dead"}`}
-        />
-      )),
+        const intervalId = setInterval(tic, ticInterval);
+        return () => clearInterval(intervalId);
+    }, [lifeGame, ticInterval]);
+
+    return (
+        <div 
+            style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                gridTemplateRows: `repeat(${rows}, 1fr)`,
+                width: '80vh',
+                height: '80vh',
+                gap: '1px'
+            }}
+        >
+            {renderedCells}
+        </div>
     );
-  }
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, 1fr)`,
-        width: "80vh",
-        height: "80vh",
-        gap: "1px", // Добавим сетку для наглядности
-      }}
-    >
-      {getCells(matrix)}
-    </div>
-  );
-}
+};
 
 export default Matrix;
